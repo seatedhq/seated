@@ -135,7 +135,7 @@ contract ReviewRegistry is EIP712 {
         worldId.verifyProof(
             worldIdRoot,
             WORLD_ID_GROUP_ID,
-            abi.encodePacked(venue).hashToField(),
+            abi.encodePacked(venue, msg.sender).hashToField(),
             worldIdNullifier,
             externalNullifierHash,
             worldIdProof

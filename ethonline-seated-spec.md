@@ -158,7 +158,7 @@ Checks in order: review exists; no reply already recorded for `reviewId`; signat
 
 ### The World ID signal
 
-Use the venue address as the World ID signal and an action of `post-review`. That gives one human one review *per venue*, not one review globally — which is what you actually want, since people eat at more than one restaurant.
+Use the venue address **and the caller's address** as the World ID signal, and an action of `post-review`. Binding the caller matters because `root`, the nullifier, and the proof are all public calldata: an unbound signal (venue alone) lets anyone who observes them in the mempool resubmit them as their own transaction and burn the real prover's nullifier at that venue before they can. Keying the nullifier per venue still gives one human one review *per venue*, not one review globally — which is what you actually want, since people eat at more than one restaurant.
 
 ---
 

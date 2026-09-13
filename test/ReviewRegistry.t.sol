@@ -174,8 +174,9 @@ contract ReviewRegistryTest is Test {
         reviews.postReview(venueId, proofId, 1, 5, CONTENT, WORLD_ROOT, NULLIFIER, zeroProof);
     }
 
-    /// The World ID signal must be the venue, so a proof cannot be replayed elsewhere.
-    function test_postReview_passesVenueAsWorldIdSignal() public {
+    /// The World ID signal must bind both the venue and the caller, so a proof
+    /// cannot be replayed by a different submitter.
+    function test_postReview_passesVenueAndCallerAsWorldIdSignal() public {
         bytes32 proofId = _redeemCheckIn(venueId, diner, bytes32(uint256(1)));
 
         vm.expectCall(
@@ -184,7 +185,7 @@ contract ReviewRegistryTest is Test {
                 IWorldID.verifyProof.selector,
                 WORLD_ROOT,
                 uint256(1),
-                abi.encodePacked(venueId).hashToField(),
+                abi.encodePacked(venueId, diner).hashToField(),
                 NULLIFIER,
                 reviews.externalNullifierHash(),
                 zeroProof
@@ -192,6 +193,33 @@ contract ReviewRegistryTest is Test {
         );
 
         _post(diner, venueId, proofId, 1, NULLIFIER);
+    }
+
+    /// Regression for the signal-binding vulnerability: an attacker who observes a
+    /// victim's public (root, nullifier, proof) tuple in the mempool must not be
+    /// able to submit it themselves and burn the victim's World ID nullifier at
+    /// that venue. Both diners hold genuine attendance vouchers; only the World ID
+    /// tuple is lifted. Because the signal now binds `msg.sender`, the attacker's
+    /// replay is rejected by the (signal-aware) World ID router rather than
+    /// succeeding and permanently silencing the victim.
+    function test_postReview_worldIdSignalCannotBeReplayedByAnotherCaller() public {
+        address victim = makeAddr("victim");
+        address attacker = makeAddr("attacker");
+
+        bytes32 victimProof = _redeemCheckIn(venueId, victim, bytes32(uint256(1)));
+        bytes32 attackerProof = _redeemCheckIn(venueId, attacker, bytes32(uint256(2)));
+
+        // The mock now behaves like the real router: it only accepts a signal
+        // bound to the actual caller (the victim), so the attacker's submission
+        // of the victim's tuple must revert rather than silently succeed.
+        worldId.setExpectedSignal(abi.encodePacked(venueId, victim).hashToField());
+
+        vm.prank(attacker);
+        vm.expectRevert(MockWorldID.MockWorldIdSignalMismatch.selector);
+        reviews.postReview(venueId, attackerProof, 1, 5, CONTENT, WORLD_ROOT, NULLIFIER, zeroProof);
+
+        // The victim, submitting their own tuple as themselves, succeeds.
+        _post(victim, venueId, victimProof, 1, NULLIFIER);
     }
 
     // --- tier 2 ---
