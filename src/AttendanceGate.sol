@@ -44,6 +44,7 @@ contract AttendanceGate is EIP712 {
     error CapacityExceeded();
     error VenueNotActive();
     error NotVoucherDiner();
+    error InvalidSeatedAt();
 
     constructor(VenueRegistry registry_) EIP712("Seated", "1") {
         registry = registry_;
@@ -62,7 +63,7 @@ contract AttendanceGate is EIP712 {
     }
 
     /// @notice Redeem a check-in voucher for an attendance proof.
-    /// @dev Check order is deliberate and demo-visible: signature, expiry, replay, capacity.
+    /// @dev Check order is deliberate and demo-visible: signature, expiry, seatedAt, replay, capacity.
     function redeem(CheckIn calldata checkIn, bytes calldata signature) external returns (bytes32 proofId) {
         if (msg.sender != checkIn.diner) revert NotVoucherDiner();
         if (!registry.isActive(checkIn.venue)) revert VenueNotActive();
@@ -80,6 +81,7 @@ contract AttendanceGate is EIP712 {
         }
 
         if (block.timestamp >= checkIn.expiry) revert VoucherExpired();
+        if (checkIn.seatedAt > block.timestamp) revert InvalidSeatedAt();
 
         bytes32 nullifier = keccak256(abi.encode(checkIn.venue, checkIn.diner, checkIn.salt));
         if (nullifierUsed[nullifier]) revert VoucherUsed();

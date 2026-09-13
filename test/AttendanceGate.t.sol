@@ -213,6 +213,37 @@ contract AttendanceGateTest is Test {
         gate.redeem(c, sig);
     }
 
+    function test_redeem_revertsWhenSeatedAtIsInTheFuture() public {
+        AttendanceGate.CheckIn memory c = AttendanceGate.CheckIn({
+            venue: venueId,
+            diner: diner,
+            seatedAt: uint64(block.timestamp + 1),
+            expiry: uint64(block.timestamp + 2 hours),
+            salt: bytes32(uint256(1))
+        });
+        bytes memory sig = _sign(c, signerPk);
+
+        vm.prank(diner);
+        vm.expectRevert(AttendanceGate.InvalidSeatedAt.selector);
+        gate.redeem(c, sig);
+    }
+
+    function test_redeem_acceptsSeatedAtEqualToBlockTimestamp() public {
+        AttendanceGate.CheckIn memory c = AttendanceGate.CheckIn({
+            venue: venueId,
+            diner: diner,
+            seatedAt: uint64(block.timestamp),
+            expiry: uint64(block.timestamp + 2 hours),
+            salt: bytes32(uint256(1))
+        });
+        bytes memory sig = _sign(c, signerPk);
+
+        vm.prank(diner);
+        bytes32 proofId = gate.redeem(c, sig);
+
+        assertEq(gate.proofOf(proofId).diner, diner);
+    }
+
     function test_proofOf_unknownIdIsEmpty() public view {
         AttendanceGate.AttendanceProof memory p = gate.proofOf(bytes32(uint256(0xdead)));
         assertEq(p.redeemedAt, 0);
