@@ -77,6 +77,16 @@ forge test
   real deployment to Base Sepolia. Do not consume it downstream until it has
   been populated from an actual `forge script` run.
 
+## Demo notes
+
+`script/SeedVenues.s.sol` seeds three demo venues with declared daily
+capacities of 40, 120, and 24 covers. A demo scene that fires 50 wallets'
+worth of check-ins at a single venue must target **venue 2 (120 covers)** —
+venues 1 and 3 don't have headroom for 50, so wallets past their cap would
+revert in `AttendanceGate.redeem` with `CapacityExceeded` before ever
+reaching `postReview`, showing the wrong error and never exercising the
+World ID personhood check that scene is meant to demonstrate.
+
 ## Design notes
 
 A few properties are deliberate, not bugs, even though each looks like one on
