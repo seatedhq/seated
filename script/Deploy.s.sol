@@ -19,14 +19,15 @@ contract Deploy is Script {
     }
 
     /// @dev Pure deployment logic, callable from tests without broadcasting.
-    function deploy(address usdc, address worldIdRouter, string memory appId, string memory action)
+    function deploy(address usdc, address worldIdRouter, string memory appId, string memory action, uint256 epochLength)
         public
         returns (Deployment memory)
     {
         VenueRegistry registry = new VenueRegistry();
         AttendanceGate gate = new AttendanceGate(registry);
         BillSettlement settlement = new BillSettlement(registry, IERC20(usdc));
-        ReviewRegistry reviews = new ReviewRegistry(registry, gate, settlement, IWorldID(worldIdRouter), appId, action);
+        ReviewRegistry reviews =
+            new ReviewRegistry(registry, gate, settlement, IWorldID(worldIdRouter), appId, action, epochLength);
 
         return Deployment({
             registry: address(registry), gate: address(gate), settlement: address(settlement), reviews: address(reviews)
@@ -38,9 +39,10 @@ contract Deploy is Script {
         address worldIdRouter = vm.envAddress("WORLD_ID_ROUTER");
         string memory appId = vm.envString("WORLD_ID_APP_ID");
         string memory action = vm.envString("WORLD_ID_ACTION");
+        uint256 epochLength = vm.envUint("REVIEW_EPOCH_LENGTH");
 
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
-        Deployment memory d = deploy(usdc, worldIdRouter, appId, action);
+        Deployment memory d = deploy(usdc, worldIdRouter, appId, action, epochLength);
         vm.stopBroadcast();
 
         console2.log("VenueRegistry  ", d.registry);

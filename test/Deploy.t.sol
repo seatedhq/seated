@@ -11,7 +11,8 @@ import {ReviewRegistry} from "../src/ReviewRegistry.sol";
 contract DeployTest is Test {
     function test_run_wiresContractsTogether() public {
         Deploy deployer = new Deploy();
-        Deploy.Deployment memory d = deployer.deploy(makeAddr("usdc"), makeAddr("worldId"), "app_seated", "post-review");
+        Deploy.Deployment memory d =
+            deployer.deploy(makeAddr("usdc"), makeAddr("worldId"), "app_seated", "post-review", 90 days);
 
         assertEq(address(AttendanceGate(d.gate).registry()), d.registry);
         assertEq(address(BillSettlement(d.settlement).registry()), d.registry);
@@ -22,7 +23,8 @@ contract DeployTest is Test {
 
     function test_run_usesSeatedEip712DomainInBothSigningContracts() public {
         Deploy deployer = new Deploy();
-        Deploy.Deployment memory d = deployer.deploy(makeAddr("usdc"), makeAddr("worldId"), "app_seated", "post-review");
+        Deploy.Deployment memory d =
+            deployer.deploy(makeAddr("usdc"), makeAddr("worldId"), "app_seated", "post-review", 90 days);
 
         (, string memory gateName, string memory gateVersion,,,,) = AttendanceGate(d.gate).eip712Domain();
         (, string memory reviewName, string memory reviewVersion,,,,) = ReviewRegistry(d.reviews).eip712Domain();

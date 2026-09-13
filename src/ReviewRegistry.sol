@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {VenueRegistry} from "./VenueRegistry.sol";
 import {AttendanceGate} from "./AttendanceGate.sol";
 import {BillSettlement} from "./BillSettlement.sol";
@@ -44,8 +45,12 @@ contract ReviewRegistry is EIP712 {
     BillSettlement public immutable settlement;
     IWorldID public immutable worldId;
 
-    /// @notice hash(appId, action) that every World ID proof must be scoped to.
-    uint256 public immutable externalNullifierHash;
+    /// @dev Pre-hashed appId; never changes across epochs.
+    uint256 internal immutable appIdHash;
+    /// @dev Base action string; the per-epoch suffix is appended at call time.
+    string internal baseAction;
+    /// @notice Length, in seconds, of one review epoch. Fixed at deployment.
+    uint256 public immutable epochLength;
 
     uint256 public reviewCount;
 
@@ -83,6 +88,7 @@ contract ReviewRegistry is EIP712 {
     error ReplyAlreadyExists();
     error ReplyDeadlineExpired();
     error BadVenueSignature();
+    error ZeroEpochLength();
 
     constructor(
         VenueRegistry registry_,
@@ -90,19 +96,51 @@ contract ReviewRegistry is EIP712 {
         BillSettlement settlement_,
         IWorldID worldId_,
         string memory appId,
-        string memory action
+        string memory action,
+        uint256 epochLength_
     ) EIP712("Seated", "1") {
+        if (epochLength_ == 0) revert ZeroEpochLength();
+
         registry = registry_;
         gate = gate_;
         settlement = settlement_;
         worldId = worldId_;
-        externalNullifierHash = abi.encodePacked(abi.encodePacked(appId).hashToField(), action).hashToField();
+        appIdHash = abi.encodePacked(appId).hashToField();
+        baseAction = action;
+        epochLength = epochLength_;
+    }
+
+    /// @notice The current review epoch, derived from block.timestamp.
+    function currentEpoch() public view returns (uint256) {
+        return block.timestamp / epochLength;
+    }
+
+    /// @notice The World ID action string scoped to a given epoch.
+    function actionForEpoch(uint256 epoch) public view returns (string memory) {
+        return string.concat(baseAction, "-", Strings.toString(epoch));
+    }
+
+    /// @notice hash(appId, actionForEpoch(epoch)) that a World ID proof for that epoch must be scoped to.
+    function externalNullifierHashForEpoch(uint256 epoch) public view returns (uint256) {
+        return abi.encodePacked(appIdHash, actionForEpoch(epoch)).hashToField();
+    }
+
+    /// @notice The external nullifier the frontend must generate its World ID proof against right now.
+    function externalNullifierHash() public view returns (uint256) {
+        return externalNullifierHashForEpoch(currentEpoch());
     }
 
     /// @notice Post a review backed by a tier-1 check-in or a tier-2 settled bill.
     /// @dev Order matters and is demo-visible: proof resolution runs before World ID
     ///      so a wallet with no voucher fails with NoAttendanceProof, while a second
     ///      wallet belonging to an already-seen human fails with AlreadyReviewedVenue.
+    /// @dev The external nullifier is derived from `block.timestamp` at execution time,
+    ///      not at proof-generation time. A proof generated near an epoch boundary whose
+    ///      transaction lands in the next epoch will therefore fail inside the World ID
+    ///      verifier (the proof was made against the old epoch's action string). Simply
+    ///      retrying — regenerating the proof against the new epoch — succeeds. This is
+    ///      intentional: no grace window is offered, because a grace window would let one
+    ///      human post twice within a single real-world period.
     function postReview(
         address venue,
         bytes32 proofId,
@@ -137,7 +175,7 @@ contract ReviewRegistry is EIP712 {
             WORLD_ID_GROUP_ID,
             abi.encodePacked(venue, msg.sender).hashToField(),
             worldIdNullifier,
-            externalNullifierHash,
+            externalNullifierHash(),
             worldIdProof
         );
 

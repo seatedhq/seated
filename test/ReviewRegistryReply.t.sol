@@ -41,8 +41,9 @@ contract ReviewRegistryReplyTest is Test {
         MockUSDC usdc = new MockUSDC();
         settlement = new BillSettlement(registry, IERC20(address(usdc)));
         worldId = new MockWorldID();
-        reviews =
-            new ReviewRegistry(registry, gate, settlement, IWorldID(address(worldId)), "app_seated", "post-review");
+        reviews = new ReviewRegistry(
+            registry, gate, settlement, IWorldID(address(worldId)), "app_seated", "post-review", 90 days
+        );
 
         vm.prank(venueId);
         registry.registerVenue(signingKey, 40, "ipfs://venue");

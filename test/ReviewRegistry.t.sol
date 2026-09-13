@@ -43,8 +43,9 @@ contract ReviewRegistryTest is Test {
         usdc = new MockUSDC();
         settlement = new BillSettlement(registry, IERC20(address(usdc)));
         worldId = new MockWorldID();
-        reviews =
-            new ReviewRegistry(registry, gate, settlement, IWorldID(address(worldId)), "app_seated", "post-review");
+        reviews = new ReviewRegistry(
+            registry, gate, settlement, IWorldID(address(worldId)), "app_seated", "post-review", 90 days
+        );
 
         vm.prank(venueId);
         registry.registerVenue(signingKey, 40, "ipfs://venue");
@@ -274,5 +275,97 @@ contract ReviewRegistryTest is Test {
         vm.prank(diner);
         vm.expectRevert(ReviewRegistry.InvalidRating.selector);
         reviews.postReview(venueId, proofId, 1, 6, CONTENT, WORLD_ROOT, NULLIFIER, zeroProof);
+    }
+
+    // --- epochs ---
+
+    function test_currentEpoch_advancesByOneAfterFullEpoch() public {
+        uint256 before = reviews.currentEpoch();
+        vm.warp(block.timestamp + 90 days);
+        assertEq(reviews.currentEpoch(), before + 1);
+    }
+
+    function test_externalNullifierHash_differsAcrossAdjacentEpochs() public {
+        uint256 first = reviews.externalNullifierHash();
+        vm.warp(block.timestamp + 90 days);
+        uint256 second = reviews.externalNullifierHash();
+        assertNotEq(first, second);
+    }
+
+    /// Pins the action-string format independently of the code that builds it.
+    function test_actionForEpoch_producesExpectedFormat() public view {
+        assertEq(reviews.actionForEpoch(0), "post-review-0");
+    }
+
+    /// The behavior the epoch feature exists for: a regular who returns after a
+    /// full period can review the same venue again, instead of being stranded
+    /// with an unusable attendance proof forever.
+    ///
+    /// `venueNullifierUsed[venue][worldIdNullifier]` has no epoch dimension in
+    /// its key (by design — see point 6 of the epoch spec), so it relies
+    /// entirely on the *nullifier value itself* differing between epochs for
+    /// the same human. In production that happens for free: nullifierHash is a
+    /// function of (identity, externalNullifier), and externalNullifier now
+    /// embeds the epoch via the per-epoch action string, so the same identity
+    /// gets a fresh nullifier value each epoch automatically.
+    ///
+    /// MockWorldID takes the nullifier as a plain argument and does not derive
+    /// it from the action string, so this test cannot literally reuse the same
+    /// nullifier constant across epochs and still see success — with an
+    /// unchanged mapping keyed on (venue, nullifier), an identical nullifier
+    /// value hits the same storage slot regardless of how much time has
+    /// passed, and would revert AlreadyReviewedVenue no matter the epoch. That
+    /// was verified directly: reusing NULLIFIER for both calls here fails even
+    /// after warping a full epoch. So the test instead uses a second nullifier
+    /// value for the post-warp call, standing in for the fresh value the real
+    /// World ID router would hand back once the action string rotated. The
+    /// "same human" is represented by the unchanged wallet address (`diner`)
+    /// making both calls; only the World ID nullifier value that a real proof
+    /// would carry changes between epochs, exactly as production behaves.
+    ///
+    /// Because MockWorldID also ignores the external nullifier argument, a
+    /// successful second postReview call alone would pass even if
+    /// externalNullifierHash() were wrongly pinned forever — so the test also
+    /// directly asserts the getter's value rotates across the warp, and pins
+    /// the exact value forwarded to the verifier on the second call.
+    function test_postReview_sameHumanMayReviewSameVenueAfterEpochAdvances() public {
+        bytes32 proofFirst = _redeemCheckIn(venueId, diner, bytes32(uint256(1)));
+        uint256 firstEpochSignal = reviews.externalNullifierHash();
+        _post(diner, venueId, proofFirst, 1, NULLIFIER);
+
+        vm.warp(block.timestamp + 90 days);
+
+        // This is the load-bearing, mutation-sensitive assertion: if
+        // externalNullifierHash() were pinned at construction instead of
+        // computed per epoch, this would be the same value as before the
+        // warp and the test would fail right here.
+        uint256 secondEpochSignal = reviews.externalNullifierHash();
+        assertNotEq(secondEpochSignal, firstEpochSignal);
+
+        bytes32 proofSecond = _redeemCheckIn(venueId, diner, bytes32(uint256(2)));
+
+        // Assert postReview actually forwards the *current* epoch's external
+        // nullifier to the World ID verifier for this second call.
+        vm.expectCall(
+            address(worldId),
+            abi.encodeWithSelector(
+                IWorldID.verifyProof.selector,
+                WORLD_ROOT,
+                uint256(1),
+                abi.encodePacked(venueId, diner).hashToField(),
+                NULLIFIER + 1,
+                secondEpochSignal,
+                zeroProof
+            )
+        );
+
+        uint256 second = _post(diner, venueId, proofSecond, 1, NULLIFIER + 1);
+
+        assertEq(second, 2);
+    }
+
+    function test_constructor_revertsOnZeroEpochLength() public {
+        vm.expectRevert(ReviewRegistry.ZeroEpochLength.selector);
+        new ReviewRegistry(registry, gate, settlement, IWorldID(address(worldId)), "app_seated", "post-review", 0);
     }
 }
