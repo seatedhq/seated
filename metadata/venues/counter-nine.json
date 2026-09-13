@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "demoData": true,
+  "name": "Counter Nine",
+  "description": "Nine seats, two sittings, one menu. An omakase counter where the chef serves every course by hand and the room turns over exactly twice a night.",
+  "cuisine": ["Japanese", "Omakase"],
+  "priceBand": "$$$$",
+  "maxCoversPerDay": 24,
+  "address": {
+    "street": "9 Ashgrove Mews",
+    "city": "London",
+    "region": "England",
+    "postalCode": "W1F 8LN",
+    "country": "GB"
+  },
+  "geo": { "lat": 51.5138, "lng": -0.1367 },
+  "contact": { "website": null, "phone": null },
+  "hours": "Wed-Sat, sittings at 18:00 and 20:30",
+  "image": null
+}
