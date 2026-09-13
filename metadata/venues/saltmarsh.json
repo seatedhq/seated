@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "demoData": true,
+  "name": "Saltmarsh",
+  "description": "Coastal British cooking from a short daily menu. Whole fish over charcoal, bread baked in-house, a wine list that leans to the Loire.",
+  "cuisine": ["British", "Seafood"],
+  "priceBand": "$$$",
+  "maxCoversPerDay": 40,
+  "address": {
+    "street": "18 Fennel Walk",
+    "city": "London",
+    "region": "England",
+    "postalCode": "E2 7QN",
+    "country": "GB"
+  },
+  "geo": { "lat": 51.5291, "lng": -0.0625 },
+  "contact": { "website": null, "phone": null },
+  "hours": "Tue-Sat 18:00-22:30",
+  "image": null
+}

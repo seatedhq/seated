@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "demoData": true,
+  "name": "Cinder & Rye",
+  "description": "A loud, high-turnover wood-fired brasserie. Two hundred covers on a good Saturday, sourdough pizza, natural wine on tap, no reservations after 20:00.",
+  "cuisine": ["Brasserie", "Wood-fired", "Pizza"],
+  "priceBand": "$$",
+  "maxCoversPerDay": 120,
+  "address": {
+    "street": "441 Kiln Road",
+    "city": "London",
+    "region": "England",
+    "postalCode": "SE8 3RW",
+    "country": "GB"
+  },
+  "geo": { "lat": 51.4785, "lng": -0.0261 },
+  "contact": { "website": null, "phone": null },
+  "hours": "Mon-Sun 12:00-23:00",
+  "image": null
+}

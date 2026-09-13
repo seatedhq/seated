@@ -21,7 +21,7 @@ You scan a QR code at the table. The restaurant's key signs an EIP-712 voucher s
 **Tier 2 — settled bill.**
 You pay the bill in USDC through the app. The settled payment is itself the attendance proof. Unforgeable, needs no trusted party, but only works where the venue accepts crypto.
 
-**Proof of personhood sits across both.** World ID gives one human one review per venue per period. Without it, tier 1 is farmable by one person with many wallets.
+**Proof of personhood sits across both.** World ID gives one human one review per venue per period. Without it, tier 1 is farmable by one person with many wallets. The period is an on-chain epoch fixed at deployment, 90 days by default.
 
 ### Why two tiers instead of one
 
@@ -152,13 +152,17 @@ struct Reply {
 // signature must recover to VenueRegistry.venues[review.venue].signingKey
 ```
 
-Checks in order: review exists; no reply already recorded for `reviewId`; signature recovers to the review's venue's registered `signingKey`; `block.timestamp < deadline`. Reverts: `UnknownReview`, `ReplyAlreadyExists`, `BadVenueSignature`. Emits `ReplyPosted(reviewId, replyHash, postedAt)` for the subgraph.
+Checks in order: review exists; no reply already recorded for `reviewId`; signature recovers to the review's venue's registered `signingKey`; `block.timestamp < deadline`. Reverts: `UnknownReview`, `ReplyAlreadyExists`, `BadVenueSignature`. Emits `ReplyPosted(uint256 indexed reviewId, address indexed venue, bytes32 replyHash, uint64 postedAt)` for the subgraph.
 
 **Venue leaderboard.** A `/leaderboard` frontend route, sortable client-side by settled-tier percentage, review count, and average rating — sourced entirely from the `VenueStats` subgraph entity below. No new contract surface.
 
 ### The World ID signal
 
-Use the venue address as the World ID signal and an action of `post-review`. That gives one human one review *per venue*, not one review globally — which is what you actually want, since people eat at more than one restaurant.
+Use the venue address **and the caller's address** as the World ID signal, and an action of `post-review`. Binding the caller matters because `root`, the nullifier, and the proof are all public calldata: an unbound signal (venue alone) lets anyone who observes them in the mempool resubmit them as their own transaction and burn the real prover's nullifier at that venue before they can. Keying the nullifier per venue still gives one human one review *per venue*, not one review globally — which is what you actually want, since people eat at more than one restaurant.
+
+Alongside the signal, the action string itself carries the epoch: the contract appends the current epoch number to `post-review` (e.g. `post-review-14`) and derives the external nullifier from that per-epoch string at call time, rather than pinning it once at deployment. Since a World ID nullifier is a function of (identity, externalNullifier), rotating the action each epoch gives every human a fresh nullifier per venue each period, which is what makes "one review per venue per period" (section 2) actually hold rather than "one review per venue ever."
+
+Because the action rotates, the frontend cannot hardcode it: it must read `ReviewRegistry.actionForEpoch(ReviewRegistry.currentEpoch())` immediately before generating each proof and pass that exact string to IDKit, never the bare base action from config.
 
 ---
 
