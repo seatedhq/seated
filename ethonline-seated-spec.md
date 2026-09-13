@@ -162,6 +162,8 @@ Use the venue address **and the caller's address** as the World ID signal, and a
 
 Alongside the signal, the action string itself carries the epoch: the contract appends the current epoch number to `post-review` (e.g. `post-review-14`) and derives the external nullifier from that per-epoch string at call time, rather than pinning it once at deployment. Since a World ID nullifier is a function of (identity, externalNullifier), rotating the action each epoch gives every human a fresh nullifier per venue each period, which is what makes "one review per venue per period" (section 2) actually hold rather than "one review per venue ever."
 
+Because the action rotates, the frontend cannot hardcode it: it must read `ReviewRegistry.actionForEpoch(ReviewRegistry.currentEpoch())` immediately before generating each proof and pass that exact string to IDKit, never the bare base action from config.
+
 ---
 
 ## 5. Sponsor integrations

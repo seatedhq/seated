@@ -104,6 +104,31 @@ first read:
    average rate is still correctly capped — it's an order-of-magnitude
    honesty check on capacity, not an audit boundary.
 
+## Frontend integration: the World ID action rotates
+
+`ReviewRegistry` does not verify proofs against a fixed action string. It
+composes one per epoch (`"<baseAction>-<epoch>"`, e.g. `post-review-231`) and
+verifies against that. The frontend **must not** hardcode or reuse the bare
+`WORLD_ID_BASE_ACTION` value from `.env.example` when calling IDKit — it must
+read the live action off the contract immediately before generating each
+proof:
+
+```js
+const action = await reviews.actionForEpoch(await reviews.currentEpoch());
+// pass `action` (not the .env base action) as the `action` prop to IDKit
+```
+
+A proof generated against a stale action reverts inside the World ID router
+with an opaque error — see the epoch-boundary note above and the NatSpec on
+`postReview`.
+
+**OPEN QUESTION (unverified):** it is not yet confirmed whether the Worldcoin
+Developer Portal requires each distinct action string to be pre-registered
+for an app. If it does, a rotating per-epoch action needs a per-epoch
+registration step, which would need to happen out-of-band before each new
+epoch's proofs can verify. Neither confirmed nor ruled out here — check
+Worldcoin's docs before relying on this in production.
+
 ## Deployed addresses
 
 _Placeholder — to be filled in after the live Base Sepolia deployment. See

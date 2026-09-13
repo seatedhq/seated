@@ -38,7 +38,7 @@ contract Deploy is Script {
         address usdc = vm.envAddress("USDC_ADDRESS");
         address worldIdRouter = vm.envAddress("WORLD_ID_ROUTER");
         string memory appId = vm.envString("WORLD_ID_APP_ID");
-        string memory action = vm.envString("WORLD_ID_ACTION");
+        string memory action = vm.envString("WORLD_ID_BASE_ACTION");
         uint256 epochLength = vm.envUint("REVIEW_EPOCH_LENGTH");
 
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
