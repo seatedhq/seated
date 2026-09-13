@@ -83,10 +83,15 @@ forge test
 A few properties are deliberate, not bugs, even though each looks like one on
 first read:
 
-1. **One human gets one review per venue, permanently — there is no reset
-   period.** `ReviewRegistry.externalNullifierHash` is immutable, so the
-   World ID nullifier scope can never be rotated after deployment to let
-   someone review a venue again.
+1. **One human gets one review per venue per epoch, not permanently.**
+   `ReviewRegistry` computes the World ID external nullifier per epoch by
+   appending the epoch number to the action string
+   (`ReviewRegistry.actionForEpoch`), so each epoch rotates every human's
+   World ID nullifier for that venue and yields a fresh review. Epoch length
+   is fixed at deployment (`epochLength`, 90 days by default) via
+   `REVIEW_EPOCH_LENGTH`. One caveat: a proof generated right at an epoch
+   boundary whose transaction lands in the next epoch will fail verification
+   and must simply be retried.
 2. **`ReviewRegistry` does not check whether a venue is still active.** A
    validly-earned proof can still back a review after the venue deactivates.
    This is intentional: the diner was there, so they may say so — the
