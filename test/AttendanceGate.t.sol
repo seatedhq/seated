@@ -162,6 +162,57 @@ contract AttendanceGateTest is Test {
         gate.redeem(c, sig);
     }
 
+    function test_redeem_nullifierCheckPrecedesCapacityCheck() public {
+        // Voucher A is redeemed first, then the venue is filled to capacity with
+        // two more distinct diners, so voucher A is now both already-used AND the
+        // venue is at its 3/3 daily cap. Replaying it must surface VoucherUsed, not
+        // CapacityExceeded — proving the nullifier check runs before capacity.
+        AttendanceGate.CheckIn memory a = _voucher(diner, bytes32(uint256(1)));
+        bytes memory sigA = _sign(a, signerPk);
+
+        vm.prank(diner);
+        gate.redeem(a, sigA);
+
+        for (uint256 i = 0; i < CAPACITY - 1; i++) {
+            address d = address(uint160(0x1000 + i));
+            AttendanceGate.CheckIn memory c = _voucher(d, bytes32(i + 1));
+            bytes memory sig = _sign(c, signerPk);
+            vm.prank(d);
+            gate.redeem(c, sig);
+        }
+
+        vm.prank(diner);
+        vm.expectRevert(AttendanceGate.VoucherUsed.selector);
+        gate.redeem(a, sigA);
+    }
+
+    function test_redeem_signatureCheckPrecedesExpiryCheck() public {
+        // Voucher is both badly-signed AND expired. BadVenueSignature must win,
+        // proving the signature check runs before the expiry check.
+        AttendanceGate.CheckIn memory c = _voucher(diner, bytes32(uint256(1)));
+        uint256 attackerPk = 0xBAD;
+        bytes memory sig = _sign(c, attackerPk);
+
+        vm.warp(c.expiry + 1);
+
+        vm.prank(diner);
+        vm.expectRevert(AttendanceGate.BadVenueSignature.selector);
+        gate.redeem(c, sig);
+    }
+
+    function test_redeem_revertsExactlyAtExpiryBoundary() public {
+        // The contract uses `block.timestamp >= checkIn.expiry`, so the exact
+        // expiry timestamp itself must already revert.
+        AttendanceGate.CheckIn memory c = _voucher(diner, bytes32(uint256(1)));
+        bytes memory sig = _sign(c, signerPk);
+
+        vm.warp(c.expiry);
+
+        vm.prank(diner);
+        vm.expectRevert(AttendanceGate.VoucherExpired.selector);
+        gate.redeem(c, sig);
+    }
+
     function test_proofOf_unknownIdIsEmpty() public view {
         AttendanceGate.AttendanceProof memory p = gate.proofOf(bytes32(uint256(0xdead)));
         assertEq(p.redeemedAt, 0);
