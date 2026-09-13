@@ -89,6 +89,7 @@ contract ReviewRegistry is EIP712 {
     error ReplyDeadlineExpired();
     error BadVenueSignature();
     error ZeroEpochLength();
+    error EpochLengthTooShort();
 
     constructor(
         VenueRegistry registry_,
@@ -100,6 +101,7 @@ contract ReviewRegistry is EIP712 {
         uint256 epochLength_
     ) EIP712("Seated", "1") {
         if (epochLength_ == 0) revert ZeroEpochLength();
+        if (epochLength_ < 1 days) revert EpochLengthTooShort();
 
         registry = registry_;
         gate = gate_;

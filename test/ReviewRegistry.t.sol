@@ -368,4 +368,16 @@ contract ReviewRegistryTest is Test {
         vm.expectRevert(ReviewRegistry.ZeroEpochLength.selector);
         new ReviewRegistry(registry, gate, settlement, IWorldID(address(worldId)), "app_seated", "post-review", 0);
     }
+
+    function test_constructor_revertsOnEpochLengthBelowOneDay() public {
+        vm.expectRevert(ReviewRegistry.EpochLengthTooShort.selector);
+        new ReviewRegistry(registry, gate, settlement, IWorldID(address(worldId)), "app_seated", "post-review", 1);
+    }
+
+    function test_constructor_acceptsEpochLengthOfExactlyOneDay() public {
+        ReviewRegistry r = new ReviewRegistry(
+            registry, gate, settlement, IWorldID(address(worldId)), "app_seated", "post-review", 1 days
+        );
+        assertEq(r.epochLength(), 1 days);
+    }
 }
