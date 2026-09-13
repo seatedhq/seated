@@ -8,6 +8,8 @@ docs/book/
 
 # Secrets
 .env
+.env.*
+!.env.example
 
 # Build process
 .superpowers/
