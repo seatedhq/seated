@@ -72,10 +72,9 @@ forge test
 - `.env.example` lists the environment variables the script and the venue
   seeding script expect (deployer key, RPC URL, World ID app config, USDC and
   World ID router addresses, per-venue seeding keys).
-- `deployments/base-sepolia.json` — **this is an unfilled template.** All four
-  contract addresses and `startBlock` are placeholder zero values pending a
-  real deployment to Base Sepolia. Do not consume it downstream until it has
-  been populated from an actual `forge script` run.
+- `deployments/base-sepolia.json` — populated from a real Base Sepolia
+  deployment. Carries the four contract addresses and the `startBlock` the
+  subgraph should index from.
 
 ## Demo notes
 
@@ -145,12 +144,19 @@ Worldcoin's docs before relying on this in production.
 
 ## Deployed addresses
 
-_Placeholder — to be filled in after the live Base Sepolia deployment. See
-`deployments/base-sepolia.json` for the machine-readable version._
+Base Sepolia (chain 84532), all verified on BaseScan. Indexed from block
+`46773870`. Machine-readable copy in `deployments/base-sepolia.json`.
 
 | Contract | Address |
 |---|---|
-| VenueRegistry | _pending deployment_ |
-| AttendanceGate | _pending deployment_ |
-| BillSettlement | _pending deployment_ |
-| ReviewRegistry | _pending deployment_ |
+| VenueRegistry | [`0xf24e76f7df7e566db21c0b36f79fb03f3b64a7ed`](https://sepolia.basescan.org/address/0xf24e76f7df7e566db21c0b36f79fb03f3b64a7ed) |
+| AttendanceGate | [`0x827a00529e7cc7b7608f0f93a231f93aa7ac8e22`](https://sepolia.basescan.org/address/0x827a00529e7cc7b7608f0f93a231f93aa7ac8e22) |
+| BillSettlement | [`0xc3720d832f97d19d9f8303bcb64ca8eda1cf0e55`](https://sepolia.basescan.org/address/0xc3720d832f97d19d9f8303bcb64ca8eda1cf0e55) |
+| ReviewRegistry | [`0xe4299049145bef1d2cd78c216d521d7d6a424730`](https://sepolia.basescan.org/address/0xe4299049145bef1d2cd78c216d521d7d6a424730) |
+
+External: USDC `0x036CbD53842c5426634e7929541eC2318f3dCF7e`, World ID router
+`0x42FF98C4E85212a5D31358ACbFe76a621b50fC02`.
+
+The live World ID action at time of deployment is `post-review-230`. It rotates
+every epoch — always read it with `actionForEpoch(currentEpoch())` rather than
+hardcoding.

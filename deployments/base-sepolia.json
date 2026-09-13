@@ -1,13 +1,12 @@
 {
-  "_status": "UNFILLED TEMPLATE: this file has not been populated with a real deployment yet. All four SEATED contract addresses below are zero and startBlock is 0. After running script/Deploy.s.sol against Base Sepolia, replace the four addresses under \"contracts\" with the real deployed addresses and set \"startBlock\" to the block number of the VenueRegistry deployment transaction (see task-7-brief.md Step 8). Do not consume this file downstream until it has been filled in.",
   "chainId": 84532,
   "network": "base-sepolia",
-  "startBlock": 0,
+  "startBlock": 46773870,
   "contracts": {
-    "VenueRegistry": "0x0000000000000000000000000000000000000000",
-    "AttendanceGate": "0x0000000000000000000000000000000000000000",
-    "BillSettlement": "0x0000000000000000000000000000000000000000",
-    "ReviewRegistry": "0x0000000000000000000000000000000000000000"
+    "VenueRegistry": "0xf24e76f7df7e566db21c0b36f79fb03f3b64a7ed",
+    "AttendanceGate": "0x827a00529e7cc7b7608f0f93a231f93aa7ac8e22",
+    "BillSettlement": "0xc3720d832f97d19d9f8303bcb64ca8eda1cf0e55",
+    "ReviewRegistry": "0xe4299049145bef1d2cd78c216d521d7d6a424730"
   },
   "external": {
     "USDC": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
