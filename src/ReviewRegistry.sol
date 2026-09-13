@@ -141,6 +141,11 @@ contract ReviewRegistry is EIP712 {
     ///      retrying — regenerating the proof against the new epoch — succeeds. This is
     ///      intentional: no grace window is offered, because a grace window would let one
     ///      human post twice within a single real-world period.
+    /// @dev The same boundary has a safety side, not just this liveness one: because
+    ///      epochs are fixed calendar windows rather than a rolling window per human, a
+    ///      human can legitimately post one second before an epoch flips and again one
+    ///      second after, two reviews seconds apart despite the nominal per-epoch limit.
+    ///      This is inherent to fixed windows and accepted.
     function postReview(
         address venue,
         bytes32 proofId,

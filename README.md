@@ -91,7 +91,12 @@ first read:
    is fixed at deployment (`epochLength`, 90 days by default) via
    `REVIEW_EPOCH_LENGTH`. One caveat: a proof generated right at an epoch
    boundary whose transaction lands in the next epoch will fail verification
-   and must simply be retried.
+   and must simply be retried. The reverse side of the same boundary is a
+   safety tradeoff, not just a liveness one: because epochs are fixed
+   calendar windows rather than a rolling window per human, one person can
+   legitimately post a review one second before an epoch flips and another
+   one second after — two reviews seconds apart despite the nominal 90-day
+   guarantee. This is inherent to fixed windows and accepted, not a bug.
 2. **`ReviewRegistry` does not check whether a venue is still active.** A
    validly-earned proof can still back a review after the venue deactivates.
    This is intentional: the diner was there, so they may say so — the
