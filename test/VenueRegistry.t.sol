@@ -14,6 +14,8 @@ contract VenueRegistryTest is Test {
     event VenueRegistered(
         address indexed venueId, address indexed owner, address signingKey, uint32 maxCoversPerDay, string metadataURI
     );
+    event SigningKeyUpdated(address indexed venueId, address newSigningKey);
+    event VenueActiveSet(address indexed venueId, bool active);
 
     function setUp() public {
         registry = new VenueRegistry();
@@ -67,6 +69,9 @@ contract VenueRegistryTest is Test {
         _register();
         address newKey = makeAddr("newKey");
 
+        vm.expectEmit(true, false, false, true);
+        emit SigningKeyUpdated(venueId, newKey);
+
         vm.prank(venueId);
         registry.setSigningKey(venueId, newKey);
 
@@ -81,13 +86,44 @@ contract VenueRegistryTest is Test {
         registry.setSigningKey(venueId, stranger);
     }
 
+    function test_setSigningKey_revertsOnZeroSigningKey() public {
+        _register();
+
+        vm.prank(venueId);
+        vm.expectRevert(VenueRegistry.ZeroSigningKey.selector);
+        registry.setSigningKey(venueId, address(0));
+    }
+
+    function test_setSigningKey_revertsOnUnregisteredVenue() public {
+        vm.prank(venueId);
+        vm.expectRevert(VenueRegistry.VenueNotRegistered.selector);
+        registry.setSigningKey(venueId, makeAddr("newKey"));
+    }
+
     function test_setActive_deactivatesVenue() public {
         _register();
+
+        vm.expectEmit(true, false, false, true);
+        emit VenueActiveSet(venueId, false);
 
         vm.prank(venueId);
         registry.setActive(venueId, false);
 
         assertFalse(registry.isActive(venueId));
+    }
+
+    function test_setActive_revertsForNonOwner() public {
+        _register();
+
+        vm.prank(stranger);
+        vm.expectRevert(VenueRegistry.NotVenueOwner.selector);
+        registry.setActive(venueId, false);
+    }
+
+    function test_setActive_revertsOnUnregisteredVenue() public {
+        vm.prank(venueId);
+        vm.expectRevert(VenueRegistry.VenueNotRegistered.selector);
+        registry.setActive(venueId, false);
     }
 
     function test_unregisteredVenue_readsAsInactive() public view {
