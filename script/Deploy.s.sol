@@ -47,5 +47,6 @@ contract Deploy is Script {
         console2.log("AttendanceGate ", d.gate);
         console2.log("BillSettlement ", d.settlement);
         console2.log("ReviewRegistry ", d.reviews);
+        console2.log("startBlock    ", block.number);
     }
 }
