@@ -90,4 +90,27 @@ contract BillSettlementTest is Test {
         BillSettlement.SettlementProof memory p = settlement.proofOf(bytes32(uint256(0xdead)));
         assertEq(p.settledAt, 0);
     }
+
+    function test_settle_paysVenueOwnerNotVenueId() public {
+        address separateOwner = makeAddr("separateOwner");
+        vm.mockCall(
+            address(registry),
+            abi.encodeWithSelector(VenueRegistry.ownerOf.selector, venueId),
+            abi.encode(separateOwner)
+        );
+
+        vm.prank(diner);
+        settlement.settle(venueId, BILL);
+
+        assertEq(usdc.balanceOf(separateOwner), BILL, "payment must go to the owner");
+        assertEq(usdc.balanceOf(venueId), 0, "payment must NOT go to the venue id");
+    }
+
+    function test_settle_revertsForUnregisteredVenue() public {
+        address unregisteredVenue = makeAddr("unregisteredVenue");
+
+        vm.prank(diner);
+        vm.expectRevert(BillSettlement.VenueNotActive.selector);
+        settlement.settle(unregisteredVenue, BILL);
+    }
 }
