@@ -69,7 +69,7 @@ contract ReviewRegistry is EIP712 {
         uint256 worldIdNullifier
     );
 
-    event ReplyPosted(uint256 indexed reviewId, bytes32 replyHash, uint64 postedAt);
+    event ReplyPosted(uint256 indexed reviewId, address indexed venue, bytes32 replyHash, uint64 postedAt);
 
     error NoAttendanceProof();
     error NoSettlementProof();
@@ -187,7 +187,7 @@ contract ReviewRegistry is EIP712 {
         if (block.timestamp >= deadline) revert ReplyDeadlineExpired();
 
         _replies[reviewId] = Reply({replyHash: replyHash, postedAt: uint64(block.timestamp)});
-        emit ReplyPosted(reviewId, replyHash, uint64(block.timestamp));
+        emit ReplyPosted(reviewId, r.venue, replyHash, uint64(block.timestamp));
     }
 
     function getReply(uint256 reviewId) external view returns (Reply memory) {

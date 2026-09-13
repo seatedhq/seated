@@ -31,7 +31,7 @@ contract ReviewRegistryReplyTest is Test {
     uint256 internal reviewId;
     uint64 internal deadline;
 
-    event ReplyPosted(uint256 indexed reviewId, bytes32 replyHash, uint64 postedAt);
+    event ReplyPosted(uint256 indexed reviewId, address indexed venue, bytes32 replyHash, uint64 postedAt);
 
     function setUp() public {
         signingKey = vm.addr(signerPk);
@@ -79,8 +79,8 @@ contract ReviewRegistryReplyTest is Test {
     }
 
     function test_postReply_emitsEvent() public {
-        vm.expectEmit(true, false, false, true);
-        emit ReplyPosted(reviewId, REPLY_BODY, uint64(block.timestamp));
+        vm.expectEmit(true, true, false, true);
+        emit ReplyPosted(reviewId, venueId, REPLY_BODY, uint64(block.timestamp));
 
         reviews.postReply(reviewId, REPLY_BODY, deadline, _signReply(reviewId, REPLY_BODY, deadline, signerPk));
     }
