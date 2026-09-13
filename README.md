@@ -62,8 +62,7 @@ forge build
 forge test
 ```
 
-67 tests pass as of this fix wave (64 at the last full-suite checkpoint, plus
-3 added here).
+74 tests pass as of this fix wave.
 
 ## Deployment
 

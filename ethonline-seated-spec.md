@@ -152,7 +152,7 @@ struct Reply {
 // signature must recover to VenueRegistry.venues[review.venue].signingKey
 ```
 
-Checks in order: review exists; no reply already recorded for `reviewId`; signature recovers to the review's venue's registered `signingKey`; `block.timestamp < deadline`. Reverts: `UnknownReview`, `ReplyAlreadyExists`, `BadVenueSignature`. Emits `ReplyPosted(reviewId, replyHash, postedAt)` for the subgraph.
+Checks in order: review exists; no reply already recorded for `reviewId`; signature recovers to the review's venue's registered `signingKey`; `block.timestamp < deadline`. Reverts: `UnknownReview`, `ReplyAlreadyExists`, `BadVenueSignature`. Emits `ReplyPosted(uint256 indexed reviewId, address indexed venue, bytes32 replyHash, uint64 postedAt)` for the subgraph.
 
 **Venue leaderboard.** A `/leaderboard` frontend route, sortable client-side by settled-tier percentage, review count, and average rating — sourced entirely from the `VenueStats` subgraph entity below. No new contract surface.
 
