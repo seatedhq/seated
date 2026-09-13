@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {VenueRegistry} from "./VenueRegistry.sol";
 import {AttendanceGate} from "./AttendanceGate.sol";
 import {BillSettlement} from "./BillSettlement.sol";
@@ -25,8 +26,15 @@ contract ReviewRegistry is EIP712 {
         uint256 worldIdNullifier;
     }
 
+    struct Reply {
+        bytes32 replyHash;
+        uint64 postedAt;
+    }
+
     uint8 public constant TIER_CHECKIN = 1;
     uint8 public constant TIER_SETTLED = 2;
+
+    bytes32 public constant REPLY_TYPEHASH = keccak256("Reply(uint256 reviewId,bytes32 replyHash,uint64 deadline)");
 
     /// @dev World ID's Orb-verified group.
     uint256 internal constant WORLD_ID_GROUP_ID = 1;
@@ -42,6 +50,7 @@ contract ReviewRegistry is EIP712 {
     uint256 public reviewCount;
 
     mapping(uint256 => Review) private _reviews;
+    mapping(uint256 => Reply) private _replies;
     /// @dev Each attendance/settlement proof backs exactly one review.
     mapping(bytes32 => bool) public proofUsed;
     /// @dev venue => World ID nullifier => used. Keyed per venue so one human gets
@@ -60,6 +69,8 @@ contract ReviewRegistry is EIP712 {
         uint256 worldIdNullifier
     );
 
+    event ReplyPosted(uint256 indexed reviewId, bytes32 replyHash, uint64 postedAt);
+
     error NoAttendanceProof();
     error NoSettlementProof();
     error ProofAlreadyUsed();
@@ -68,6 +79,10 @@ contract ReviewRegistry is EIP712 {
     error InvalidRating();
     error InvalidTier();
     error AlreadyReviewedVenue();
+    error UnknownReview();
+    error ReplyAlreadyExists();
+    error ReplyDeadlineExpired();
+    error BadVenueSignature();
 
     constructor(
         VenueRegistry registry_,
@@ -148,5 +163,34 @@ contract ReviewRegistry is EIP712 {
 
     function getReview(uint256 reviewId) external view returns (Review memory) {
         return _reviews[reviewId];
+    }
+
+    /// @notice EIP-712 digest the venue's signing key must sign to reply.
+    function hashReply(uint256 reviewId, bytes32 replyHash, uint64 deadline) external view returns (bytes32) {
+        return _hashTypedDataV4(keccak256(abi.encode(REPLY_TYPEHASH, reviewId, replyHash, deadline)));
+    }
+
+    /// @notice Record a venue's public reply to a review. One reply per review.
+    /// @dev Signed by the same key that signs check-in vouchers: one accountable
+    ///      identity produces both artifacts. Anyone may relay the transaction.
+    function postReply(uint256 reviewId, bytes32 replyHash, uint64 deadline, bytes calldata signature) external {
+        Review memory r = _reviews[reviewId];
+        if (r.postedAt == 0) revert UnknownReview();
+        if (_replies[reviewId].postedAt != 0) revert ReplyAlreadyExists();
+
+        bytes32 digest = _hashTypedDataV4(keccak256(abi.encode(REPLY_TYPEHASH, reviewId, replyHash, deadline)));
+        (address signer, ECDSA.RecoverError err,) = ECDSA.tryRecover(digest, signature);
+        if (err != ECDSA.RecoverError.NoError || signer != registry.signingKeyOf(r.venue)) {
+            revert BadVenueSignature();
+        }
+
+        if (block.timestamp >= deadline) revert ReplyDeadlineExpired();
+
+        _replies[reviewId] = Reply({replyHash: replyHash, postedAt: uint64(block.timestamp)});
+        emit ReplyPosted(reviewId, replyHash, uint64(block.timestamp));
+    }
+
+    function getReply(uint256 reviewId) external view returns (Reply memory) {
+        return _replies[reviewId];
     }
 }
