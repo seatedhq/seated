@@ -1,1 +1,13 @@
 *:Zone.Identifier
+
+# Foundry
+cache/
+out/
+broadcast/
+docs/book/
+
+# Secrets
+.env
+
+# Build process
+.superpowers/
